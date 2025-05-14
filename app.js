@@ -405,24 +405,7 @@ function createBetButton(isUp) {
     return button;
 }
 
-function createResponsibleGamblingUI() {
-    const warning = new PIXI.Text('Play responsibly. Gambling can be addictive.', CONFIG.UI.TEXT_STYLES.WARNING);
-    warning.position.set(app.screen.width - 300, app.screen.height - 30);
-    warning.interactive = true;
-    warning.buttonMode = true;
-    warning.on('pointerdown', () => {
-        const modal = new PIXI.Text('Set spending limits or take a break.', {
-            fontSize: 24,
-            fill: 0xFFFFFF,
-            fontFamily: 'Roboto Condensed'
-        });
-        modal.anchor.set(0.5);
-        modal.position.set(app.screen.width / 2, app.screen.height / 2);
-        app.stage.addChild(modal);
-        setTimeout(() => app.stage.removeChild(modal), 3000);
-    });
-    return warning;
-}
+
 
 function createMuteButton() {
     const button = new PIXI.Container();
@@ -502,11 +485,7 @@ function createWinBar() {
 
     window.updateWinDisplay = (amount) => {
         window._winText.text = `WIN: $${amount.toFixed(2)}`;
-        gsap.fromTo(
-            winText.scale,
-            { x: 1.3, y: 1.3 },
-            { x: 1, y: 1, duration: 0.4, ease: 'elastic.out(1, 0.3)' }
-        );
+        // Removed the jumping effect (scaling animation) on winText
         gsap.fromTo(
             glow,
             { alpha: 0.8 },
@@ -1132,8 +1111,7 @@ function setupGame() {
     historyText.on('pointerdown', exportHistory);
     uiContainer.addChild(historyText);
 
-    const warningText = createResponsibleGamblingUI();
-    uiContainer.addChild(warningText);
+    
 
     const spinButton = createSpinButton();
     uiContainer.addChild(spinButton);
