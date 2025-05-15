@@ -1,5 +1,6 @@
-// Initialize game variables
-let balanceText, freeSpinsText, betText, autoplayText, historyText, reels, winText;
+// Initialize game variables globally for accessibility
+let balanceText, freeSpinsText, betText, autoplayText, historyText, reels, winText,
+    reelsContainer, spinButton, betUp, betDown, muteButton, buyBonusButton;
 
 // Cleanup previous application if exists
 if (window.__slotMachineApp) {
@@ -7,10 +8,10 @@ if (window.__slotMachineApp) {
     document.querySelector('canvas')?.remove();
 }
 
-// Initialize PIXI Application
+// Initialize PIXI Application with dynamic dimensions
 const app = new PIXI.Application({
-    width: 1200,
-    height: 800,
+    width: window.innerWidth,
+    height: window.innerHeight,
     backgroundColor: 0x0a0a1a,
     antialias: true,
     resolution: window.devicePixelRatio || 1,
@@ -30,7 +31,6 @@ if (typeof PixiPlugin !== 'undefined') {
 const loadingDiv = document.getElementById('loading');
 loadingDiv.style.display = 'block';
 
-// ======== SOUND MANAGER ========
 class SoundManager {
     constructor() {
         this.sounds = {
@@ -121,7 +121,7 @@ const soundManager = new SoundManager();
 const CONFIG = {
     REELS: 5,
     ROWS: 3,
-    SYMBOL_SIZE: 120,
+    SYMBOL_SIZE: Math.max(60, Math.min(window.innerWidth / 10, 120)), // Dynamic symbol size
     SPIN_DURATION: 1500,
     BET_LEVELS: [1, 2, 5, 10, 20, 50, 100],
     SYMBOLS: [
@@ -291,19 +291,21 @@ function createSymbolGraphic(symbol) {
 // ======== UI SETUP ========
 function createSpinButton() {
     const button = new PIXI.Container();
+    const buttonWidth = Math.min(220, window.innerWidth / 3);
+    const buttonHeight = Math.min(70, window.innerHeight / 10);
     const bg = new PIXI.Graphics()
         .beginFill(0xFFD700)
-        .drawRoundedRect(0, 0, 220, 70, 20)
+        .drawRoundedRect(0, 0, buttonWidth, buttonHeight, 20)
         .endFill()
         .lineStyle(4, 0xFFFFFF)
-        .drawRoundedRect(0, 0, 220, 70, 20)
+        .drawRoundedRect(0, 0, buttonWidth, buttonHeight, 20)
         .beginFill(0xDAA520, 0.8)
-        .drawRoundedRect(5, 5, 210, 60, 15)
+        .drawRoundedRect(5, 5, buttonWidth - 10, buttonHeight - 10, 15)
         .endFill();
     button.addChild(bg);
 
     const text = new PIXI.Text(state.freeSpins > 0 ? 'FREE SPIN' : `SPIN`, {
-        fontSize: 32,
+        fontSize: Math.min(32, buttonWidth / 7),
         fill: 0xFFFFFF,
         fontFamily: 'Roboto Condensed',
         fontWeight: 'bold',
@@ -312,10 +314,9 @@ function createSpinButton() {
         dropShadowDistance: 2
     });
     text.anchor.set(0.5);
-    text.position.set(110, 35);
+    text.position.set(buttonWidth / 2, buttonHeight / 2);
     button.addChild(text);
 
-    button.position.set((app.screen.width - 220) / 2, app.screen.height - 90);
     button.interactive = true;
     button.buttonMode = true;
 
@@ -373,21 +374,23 @@ function createAutoplayButton() {
     return button;
 }
 
+
 function createBetButton(isUp) {
     const button = new PIXI.Container();
+    const buttonSize = Math.min(50, window.innerWidth / 8);
     const bg = new PIXI.Graphics()
         .beginFill(0x666666)
-        .drawRoundedRect(0, 0, 50, 50, 10)
+        .drawRoundedRect(0, 0, buttonSize, buttonSize, 10)
         .endFill();
     button.addChild(bg);
 
     const text = new PIXI.Text(isUp ? '+' : '-', {
-        fontSize: 28,
+        fontSize: Math.min(28, buttonSize / 2),
         fill: 0xFFFFFF,
         fontFamily: 'Roboto Condensed'
     });
     text.anchor.set(0.5);
-    text.position.set(25, 25);
+    text.position.set(buttonSize / 2, buttonSize / 2);
     button.addChild(text);
 
     button.interactive = true;
@@ -405,29 +408,28 @@ function createBetButton(isUp) {
     return button;
 }
 
-
-
 function createMuteButton() {
     const button = new PIXI.Container();
+    const buttonWidth = Math.min(80, window.innerWidth / 5);
+    const buttonHeight = Math.min(50, window.innerHeight / 15);
     const bg = new PIXI.Graphics()
         .beginFill(0x333333)
-        .drawRoundedRect(0, 0, 80, 50, 10)
+        .drawRoundedRect(0, 0, buttonWidth, buttonHeight, 10)
         .endFill()
         .lineStyle(2, 0xFFFFFF)
-        .drawRoundedRect(0, 0, 80, 50, 10);
+        .drawRoundedRect(0, 0, buttonWidth, buttonHeight, 10);
     button.addChild(bg);
 
     const text = new PIXI.Text('MUTE', {
-        fontSize: 20,
+        fontSize: Math.min(20, buttonWidth / 4),
         fill: 0xFFFFFF,
         fontFamily: 'Roboto Condensed',
         fontWeight: 'bold'
     });
     text.anchor.set(0.5);
-    text.position.set(40, 25);
+    text.position.set(buttonWidth / 2, buttonHeight / 2);
     button.addChild(text);
 
-    button.position.set(app.screen.width - 100, 20);
     button.interactive = true;
     button.buttonMode = true;
 
@@ -441,27 +443,29 @@ function createMuteButton() {
 
 function createWinBar() {
     const winBar = new PIXI.Container();
+    const winBarWidth = CONFIG.REELS * CONFIG.SYMBOL_SIZE;
+    const winBarHeight = 70;
     const bg = new PIXI.Graphics()
         .beginFill(0x1a1a1a, 0.9)
-        .drawRoundedRect(0, 0, CONFIG.REELS * CONFIG.SYMBOL_SIZE, 70, 20)
+        .drawRoundedRect(0, 0, winBarWidth, winBarHeight, 20)
         .endFill();
     winBar.addChild(bg);
 
     const gradient = new PIXI.Graphics()
         .beginFill(0x333333, 0.5)
-        .drawRoundedRect(0, 0, CONFIG.REELS * CONFIG.SYMBOL_SIZE, 35, 20)
+        .drawRoundedRect(0, 0, winBarWidth, winBarHeight / 2, 20)
         .endFill();
-    gradient.position.set(0, 35);
+    gradient.position.set(0, winBarHeight / 2);
     winBar.addChild(gradient);
 
     const border = new PIXI.Graphics()
         .lineStyle(4, 0xFFFFFF)
-        .drawRoundedRect(0, 0, CONFIG.REELS * CONFIG.SYMBOL_SIZE, 70, 20);
+        .drawRoundedRect(0, 0, winBarWidth, winBarHeight, 20);
     winBar.addChild(border);
 
     const glow = new PIXI.Graphics()
         .beginFill(0x333333, 0.2)
-        .drawRoundedRect(-10, -10, CONFIG.REELS * CONFIG.SYMBOL_SIZE + 20, 90, 30)
+        .drawRoundedRect(-10, -10, winBarWidth + 20, winBarHeight + 20, 30)
         .endFill();
     glow.alpha = 0.5;
     winBar.addChildAt(glow, 0);
@@ -477,7 +481,7 @@ function createWinBar() {
         align: 'center',
     });
     winText.anchor.set(0.5);
-    winText.position.set((CONFIG.REELS * CONFIG.SYMBOL_SIZE) / 2, 35);
+    winText.position.set(winBarWidth / 2, winBarHeight / 2);
     winBar.addChild(winText);
 
     gsap.from(winBar, { alpha: 0, duration: 0.5, ease: 'power1.out' });
@@ -485,7 +489,6 @@ function createWinBar() {
 
     window.updateWinDisplay = (amount) => {
         window._winText.text = `WIN: $${amount.toFixed(2)}`;
-        // Removed the jumping effect (scaling animation) on winText
         gsap.fromTo(
             glow,
             { alpha: 0.8 },
@@ -494,7 +497,7 @@ function createWinBar() {
     };
 
     winBar.position.set(
-        (app.screen.width - (CONFIG.REELS * CONFIG.SYMBOL_SIZE)) / 2,
+        (app.screen.width - winBarWidth) / 2,
         20
     );
 
@@ -524,7 +527,7 @@ function createFreeSpinsIcon() {
         dropShadowDistance: 2,
     });
     text.anchor.set(0.5);
-    text.position.set(bg.width / 2, bg.height / 2);
+    text.position.set(100, 30);
     container.addChild(text);
 
     const progressBarBg = new PIXI.Graphics()
@@ -573,7 +576,7 @@ function createMultiplierIcon() {
         dropShadowDistance: 2,
     });
     text.anchor.set(0.5);
-    text.position.set(bg.width / 2, bg.height / 2);
+    text.position.set(100, 30);
     container.addChild(text);
 
     gsap.to(text, {
@@ -587,6 +590,79 @@ function createMultiplierIcon() {
     container.visible = false;
 
     return { container, text };
+}
+
+function showConfirmDialog(message, onConfirm, onCancel) {
+    const container = new PIXI.Container();
+
+    // Background overlay
+    const overlay = new PIXI.Graphics()
+        .beginFill(0x000000, 0.7)
+        .drawRect(0, 0, app.screen.width, app.screen.height)
+        .endFill();
+    container.addChild(overlay);
+
+    // Dialog box
+    const boxWidth = 400, boxHeight = 180;
+    const box = new PIXI.Graphics()
+        .beginFill(0x222222, 0.95)
+        .drawRoundedRect(0, 0, boxWidth, boxHeight, 20)
+        .endFill()
+        .lineStyle(3, 0xFFD700)
+        .drawRoundedRect(0, 0, boxWidth, boxHeight, 20);
+    box.position.set((app.screen.width - boxWidth) / 2, (app.screen.height - boxHeight) / 2);
+    container.addChild(box);
+
+    // Message text
+    const text = new PIXI.Text(message, {
+        fontSize: 22,
+        fill: 0xFFFFFF,
+        fontFamily: 'Arial Black',
+        align: 'center',
+        wordWrap: true,
+        wordWrapWidth: boxWidth - 40
+    });
+    text.anchor.set(0.5);
+    text.position.set(app.screen.width / 2, app.screen.height / 2 - 30);
+    container.addChild(text);
+
+    // Yes button
+    const yesBtn = new PIXI.Graphics()
+        .beginFill(0x00CC66)
+        .drawRoundedRect(0, 0, 120, 50, 12)
+        .endFill();
+    yesBtn.position.set(app.screen.width / 2 - 130, app.screen.height / 2 + 30);
+    yesBtn.interactive = true;
+    yesBtn.buttonMode = true;
+    const yesText = new PIXI.Text('YES', { fontSize: 22, fill: 0xFFFFFF, fontWeight: 'bold' });
+    yesText.anchor.set(0.5);
+    yesText.position.set(60, 25);
+    yesBtn.addChild(yesText);
+    yesBtn.on('pointerdown', () => {
+        app.stage.removeChild(container);
+        if (onConfirm) onConfirm();
+    });
+    container.addChild(yesBtn);
+
+    // No button
+    const noBtn = new PIXI.Graphics()
+        .beginFill(0xCC3333)
+        .drawRoundedRect(0, 0, 120, 50, 12)
+        .endFill();
+    noBtn.position.set(app.screen.width / 2 + 10, app.screen.height / 2 + 30);
+    noBtn.interactive = true;
+    noBtn.buttonMode = true;
+    const noText = new PIXI.Text('NO', { fontSize: 22, fill: 0xFFFFFF, fontWeight: 'bold' });
+    noText.anchor.set(0.5);
+    noText.position.set(60, 25);
+    noBtn.addChild(noText);
+    noBtn.on('pointerdown', () => {
+        app.stage.removeChild(container);
+        if (onCancel) onCancel();
+    });
+    container.addChild(noBtn);
+
+    app.stage.addChild(container);
 }
 
 // ======== GAME LOGIC ========
@@ -622,7 +698,6 @@ function startSpin(isFirstBonusSpin = false, isManualSpin = true) {
     state.isSpinning = true;
     soundManager.play('spin');
 
-    // Handle free spins logic only for subsequent spins, not the first bonus spin
     if (state.freeSpins > 0 && !isFirstBonusSpin) {
         state.freeSpins--;
         state.currentFreeSpin++;
@@ -638,7 +713,6 @@ function startSpin(isFirstBonusSpin = false, isManualSpin = true) {
         window.updateWinDisplay(0);
     }
 
-    // Show icons on the first bonus spin and update them on subsequent spins
     if (state.freeSpins > 0) {
         window._freeSpinsContainer.visible = true;
         window._multiplierContainer.visible = true;
@@ -658,7 +732,6 @@ function spinReels() {
     let scatterCount = 0;
     let mapCount = 0;
 
-    const reelsContainer = app.stage.getChildAt(1);
     const reels = reelsContainer.children;
     
     reels.forEach((reel, i) => {
@@ -738,7 +811,7 @@ function checkWins() {
         [2, 1, 0, 1, 2],
     ];
 
-    const reels = app.stage.getChildAt(1).children;
+    const reels = reelsContainer.children;
     const winningPositions = [];
 
     lines.forEach((line) => {
@@ -837,19 +910,24 @@ function buyBonus() {
         return;
     }
 
-    state.balance -= bonusCost;
-    state.updateBalance(0);
-    balanceText.text = `CREDITS: $${state.balance.toFixed(2)}`;
-
-    fakeSpinForBonus();
+    showConfirmDialog(
+        `Are you sure you want to purchase a bonus for $${bonusCost}?`,
+        () => {
+            state.balance -= bonusCost;
+            state.updateBalance(0);
+            balanceText.text = `CREDITS: $${state.balance.toFixed(2)}`;
+            fakeSpinForBonus();
+        }
+    );
 }
+
 
 function fakeSpinForBonus() {
     state.isSpinning = true;
     let reelsStopped = 0;
     let mapCount = 0;
 
-    const reels = app.stage.getChildAt(1).children;
+    const reels = reelsContainer.children;
     state.gameHistory.push({ bet: state.currentBet, win: 0, timestamp: new Date() });
     historyText.text = `HISTORY: ${state.gameHistory.length} spins`;
 
@@ -883,11 +961,11 @@ function fakeSpinForBonus() {
                     if (mapCount >= 3) {
                         state.bonusTotalWin = win;
                         state.freeSpins = 6;
-                        window._freeSpinsText.text = `FREE SPINS: ${state.freeSpins}`; // Show 6 initially
+                        window._freeSpinsText.text = `FREE SPINS: ${state.freeSpins}`;
                         window.updateWinDisplay(state.bonusTotalWin);
                         showBonusMessage("BONUS TRIGGERED!", () => {
                             state.isSpinning = false;
-                            startSpin(true, false); // First bonus spin, won’t decrement
+                            startSpin(true, false);
                         });
                         soundManager.play('bonus');
                     }
@@ -898,11 +976,10 @@ function fakeSpinForBonus() {
 }
 
 function highlightWinners(winningPositions) {
-    const reelsContainer = app.stage.getChildAt(1);
     soundManager.play('win');
 
     winningPositions.forEach(({ reelIdx, row }) => {
-        const reel = reels[reelIdx];
+        const reel = reelsContainer.children[reelIdx];
         const symbol = reel.children[row];
         const highlight = new PIXI.Graphics()
             .lineStyle(4, 0xFFD700)
@@ -1049,6 +1126,52 @@ function showBonusSummary(totalWin) {
     app.stage.addChild(summaryContainer);
 }
 
+// ======== RESPONSIVE UI ========
+// Function to update positions based on screen size
+function updateUIPositions() {
+    const screenWidth = app.screen.width;
+    const screenHeight = app.screen.height;
+
+    // Scale and center reels
+    const reelScale = Math.min(screenWidth / 1200, screenHeight / 800);
+    reelsContainer.scale.set(reelScale);
+    reelsContainer.position.set(
+        (screenWidth - (CONFIG.REELS * CONFIG.SYMBOL_SIZE * reelScale)) / 2,
+        (screenHeight - (CONFIG.ROWS * CONFIG.SYMBOL_SIZE * reelScale)) / 2
+    );
+
+    // Position spin button (bottom-center)
+    spinButton.position.set((screenWidth - 220) / 2, screenHeight - 90);
+
+    // Position bet buttons
+    betUp.position.set(screenWidth - 100, screenHeight - 80);
+    betDown.position.set(screenWidth - 160, screenHeight - 80);
+
+    // Position mute button
+    muteButton.position.set(screenWidth - 100, 20);
+
+    // Position buy bonus button
+    buyBonusButton.position.set(30, screenHeight / 2 - 100);
+
+    // Position text
+    balanceText.position.set(20, 20);
+    freeSpinsText.position.set(20, 60);
+    betText.position.set(20, 100);
+    autoplayText.position.set(20, 140);
+    historyText.position.set(20, screenHeight - 30);
+
+    // Position free spins and multiplier icons
+    const reelsRightEdge = reelsContainer.x + (CONFIG.REELS * CONFIG.SYMBOL_SIZE * reelScale);
+    window._freeSpinsContainer.position.set(reelsRightEdge + 20, screenHeight / 2 - 60);
+    window._multiplierContainer.position.set(reelsRightEdge + 20, screenHeight / 2);
+}
+
+// Handle window resizing
+window.addEventListener('resize', () => {
+    app.renderer.resize(window.innerWidth, window.innerHeight);
+    updateUIPositions();
+});
+
 // ======== GAME SETUP ========
 function setupGame() {
     loadingDiv.style.display = 'none';
@@ -1060,11 +1183,7 @@ function setupGame() {
     app.stage.addChildAt(background, 0);
     gsap.to(background, { alpha: 1, duration: 1 });
 
-    const reelsContainer = new PIXI.Container();
-    reelsContainer.position.set(
-        (app.screen.width - (CONFIG.REELS * CONFIG.SYMBOL_SIZE)) / 2,
-        100
-    );
+    reelsContainer = new PIXI.Container();
     app.stage.addChild(reelsContainer);
 
     reels = [];
@@ -1089,46 +1208,37 @@ function setupGame() {
     app.stage.addChild(winBar);
 
     balanceText = new PIXI.Text(`CREDITS: $${state.balance}`, CONFIG.UI.TEXT_STYLES.BALANCE);
-    balanceText.position.set(20, 20);
     uiContainer.addChild(balanceText);
 
     freeSpinsText = new PIXI.Text('', CONFIG.UI.TEXT_STYLES.FREESPINS);
-    freeSpinsText.position.set(20, 60);
     uiContainer.addChild(freeSpinsText);
 
     betText = new PIXI.Text(`BET: $${state.currentBet}`, CONFIG.UI.TEXT_STYLES.BET);
-    betText.position.set(20, 100);
     uiContainer.addChild(betText);
 
     autoplayText = new PIXI.Text('', CONFIG.UI.TEXT_STYLES.BET);
-    autoplayText.position.set(20, 140);
     uiContainer.addChild(autoplayText);
 
     historyText = new PIXI.Text('HISTORY: 0 spins', CONFIG.UI.TEXT_STYLES.HISTORY);
-    historyText.position.set(20, app.screen.height - 30);
     historyText.interactive = true;
     historyText.buttonMode = true;
     historyText.on('pointerdown', exportHistory);
     uiContainer.addChild(historyText);
 
-    
-
-    const spinButton = createSpinButton();
+    spinButton = createSpinButton();
     uiContainer.addChild(spinButton);
 
     const autoplayButton = createAutoplayButton();
     uiContainer.addChild(autoplayButton);
 
-    const betUp = createBetButton(true);
-    const betDown = createBetButton(false);
-    betUp.position.set(app.screen.width - 100, app.screen.height - 80);
-    betDown.position.set(app.screen.width - 160, app.screen.height - 80);
+    betUp = createBetButton(true);
+    betDown = createBetButton(false);
     uiContainer.addChild(betUp, betDown);
 
-    const muteButton = createMuteButton();
+    muteButton = createMuteButton();
     uiContainer.addChild(muteButton);
 
-    const buyBonusButton = new PIXI.Graphics()
+    buyBonusButton = new PIXI.Graphics()
         .beginFill(0xFF4500)
         .drawRoundedRect(0, 0, 150, 50, 10)
         .endFill()
@@ -1149,7 +1259,6 @@ function setupGame() {
     buyBonusText.anchor.set(0.5);
     buyBonusText.position.set(75, 25);
     buyBonusButton.addChild(buyBonusText);
-    buyBonusButton.position.set(30, (app.screen.height / 2) - 100);
     buyBonusButton.interactive = true;
     buyBonusButton.buttonMode = true;
     buyBonusButton.on('pointerdown', buyBonus);
@@ -1157,9 +1266,6 @@ function setupGame() {
 
     const freeSpinsIcon = createFreeSpinsIcon();
     const multiplierIcon = createMultiplierIcon();
-    const reelsRightEdge = reelsContainer.x + (CONFIG.REELS * CONFIG.SYMBOL_SIZE);
-    freeSpinsIcon.container.position.set(reelsRightEdge + 20, app.screen.height / 2 - 60);
-    multiplierIcon.container.position.set(reelsRightEdge + 20, app.screen.height / 2);
     app.stage.addChild(freeSpinsIcon.container);
     app.stage.addChild(multiplierIcon.container);
 
@@ -1167,6 +1273,9 @@ function setupGame() {
     window._multiplierText = multiplierIcon.text;
     window._freeSpinsContainer = freeSpinsIcon.container;
     window._multiplierContainer = multiplierIcon.container;
+
+    // Update positions for initial layout
+    updateUIPositions();
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !state.isSpinning) startSpin();
