@@ -8,17 +8,55 @@ if (window.__slotMachineApp) {
     document.querySelector('canvas')?.remove();
 }
 
-// Initialize PIXI Application with dynamic dimensions
+// Initialize PIXI Application with fixed dimensions
+const BASE_WIDTH = 1200;
+const BASE_HEIGHT = 800;
 const app = new PIXI.Application({
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: BASE_WIDTH,     // Fixed base width
+    height: BASE_HEIGHT,   // Fixed base height
     backgroundColor: 0x0a0a1a,
     antialias: true,
-    resolution: window.devicePixelRatio || 1,
-    autoDensity: true
+    resolution: 1,         // Set to 1 initially, adjust dynamically
+    autoDensity: true      // Helps with high-DPI displays
 });
 window.__slotMachineApp = app;
 document.body.appendChild(app.view);
+
+// Function to scale and center the canvas
+function scaleCanvas() {
+    const devicePixelRatio = window.devicePixelRatio || 1;
+
+    // Calculate the scale to fit the window while maintaining aspect ratio
+    const scaleX = window.innerWidth / BASE_WIDTH;
+    const scaleY = window.innerHeight / BASE_HEIGHT;
+    const scale = Math.min(scaleX, scaleY);
+
+    // Adjust the renderer resolution to account for device pixel ratio
+    app.renderer.resolution = devicePixelRatio;
+    app.renderer.resize(BASE_WIDTH, BASE_HEIGHT);
+
+    // Scale the canvas using CSS to fit the screen
+    const scaledWidth = BASE_WIDTH * scale;
+    const scaledHeight = BASE_HEIGHT * scale;
+    app.view.style.width = `${scaledWidth}px`;
+    app.view.style.height = `${scaledHeight}px`;
+    app.view.style.position = 'absolute';
+    app.view.style.left = `${(window.innerWidth - scaledWidth) / 2}px`;
+    app.view.style.top = `${(window.innerHeight - scaledHeight) / 2}px`;
+
+    // Update app.screen dimensions for UI calculations
+    app.screen.width = BASE_WIDTH;
+    app.screen.height = BASE_HEIGHT;
+}
+
+// Initial canvas scaling
+scaleCanvas();
+
+// Handle window resizing
+window.addEventListener('resize', () => {
+    scaleCanvas();
+    updateUIPositions();
+});
 
 // Register GSAP PixiPlugin
 if (typeof PixiPlugin !== 'undefined') {
@@ -121,7 +159,7 @@ const soundManager = new SoundManager();
 const CONFIG = {
     REELS: 5,
     ROWS: 3,
-    SYMBOL_SIZE: Math.max(60, Math.min(window.innerWidth / 10, 120)), // Dynamic symbol size
+    SYMBOL_SIZE: 120, // Fixed size for consistency
     SPIN_DURATION: 1500,
     BET_LEVELS: [1, 2, 5, 10, 20, 50, 100],
     SYMBOLS: [
@@ -291,8 +329,8 @@ function createSymbolGraphic(symbol) {
 // ======== UI SETUP ========
 function createSpinButton() {
     const button = new PIXI.Container();
-    const buttonWidth = Math.min(220, window.innerWidth / 3);
-    const buttonHeight = Math.min(70, window.innerHeight / 10);
+    const buttonWidth = 220;
+    const buttonHeight = 70;
     const bg = new PIXI.Graphics()
         .beginFill(0xFFD700)
         .drawRoundedRect(0, 0, buttonWidth, buttonHeight, 20)
@@ -305,7 +343,7 @@ function createSpinButton() {
     button.addChild(bg);
 
     const text = new PIXI.Text(state.freeSpins > 0 ? 'FREE SPIN' : `SPIN`, {
-        fontSize: Math.min(32, buttonWidth / 7),
+        fontSize: 32,
         fill: 0xFFFFFF,
         fontFamily: 'Roboto Condensed',
         fontWeight: 'bold',
@@ -319,7 +357,6 @@ function createSpinButton() {
 
     button.interactive = true;
     button.buttonMode = true;
-
     button.on('pointerover', () => {
         gsap.to(button.scale, { x: 1.05, y: 1.05, duration: 0.2 });
         gsap.to(bg, { pixi: { tint: 0xFFFFE0 }, duration: 0.2 });
@@ -374,10 +411,9 @@ function createAutoplayButton() {
     return button;
 }
 
-
 function createBetButton(isUp) {
     const button = new PIXI.Container();
-    const buttonSize = Math.min(50, window.innerWidth / 8);
+    const buttonSize = 50;
     const bg = new PIXI.Graphics()
         .beginFill(0x666666)
         .drawRoundedRect(0, 0, buttonSize, buttonSize, 10)
@@ -385,7 +421,7 @@ function createBetButton(isUp) {
     button.addChild(bg);
 
     const text = new PIXI.Text(isUp ? '+' : '-', {
-        fontSize: Math.min(28, buttonSize / 2),
+        fontSize: 28,
         fill: 0xFFFFFF,
         fontFamily: 'Roboto Condensed'
     });
@@ -410,8 +446,8 @@ function createBetButton(isUp) {
 
 function createMuteButton() {
     const button = new PIXI.Container();
-    const buttonWidth = Math.min(80, window.innerWidth / 5);
-    const buttonHeight = Math.min(50, window.innerHeight / 15);
+    const buttonWidth = 80;
+    const buttonHeight = 50;
     const bg = new PIXI.Graphics()
         .beginFill(0x333333)
         .drawRoundedRect(0, 0, buttonWidth, buttonHeight, 10)
@@ -421,7 +457,7 @@ function createMuteButton() {
     button.addChild(bg);
 
     const text = new PIXI.Text('MUTE', {
-        fontSize: Math.min(20, buttonWidth / 4),
+        fontSize: 20,
         fill: 0xFFFFFF,
         fontFamily: 'Roboto Condensed',
         fontWeight: 'bold'
@@ -921,7 +957,6 @@ function buyBonus() {
     );
 }
 
-
 function fakeSpinForBonus() {
     state.isSpinning = true;
     let reelsStopped = 0;
@@ -1132,12 +1167,10 @@ function updateUIPositions() {
     const screenWidth = app.screen.width;
     const screenHeight = app.screen.height;
 
-    // Scale and center reels
-    const reelScale = Math.min(screenWidth / 1200, screenHeight / 800);
-    reelsContainer.scale.set(reelScale);
+    // Position reels in the center
     reelsContainer.position.set(
-        (screenWidth - (CONFIG.REELS * CONFIG.SYMBOL_SIZE * reelScale)) / 2,
-        (screenHeight - (CONFIG.ROWS * CONFIG.SYMBOL_SIZE * reelScale)) / 2
+        (screenWidth - (CONFIG.REELS * CONFIG.SYMBOL_SIZE)) / 2,
+        (screenHeight - (CONFIG.ROWS * CONFIG.SYMBOL_SIZE)) / 2
     );
 
     // Position spin button (bottom-center)
@@ -1161,16 +1194,10 @@ function updateUIPositions() {
     historyText.position.set(20, screenHeight - 30);
 
     // Position free spins and multiplier icons
-    const reelsRightEdge = reelsContainer.x + (CONFIG.REELS * CONFIG.SYMBOL_SIZE * reelScale);
+    const reelsRightEdge = reelsContainer.x + (CONFIG.REELS * CONFIG.SYMBOL_SIZE);
     window._freeSpinsContainer.position.set(reelsRightEdge + 20, screenHeight / 2 - 60);
     window._multiplierContainer.position.set(reelsRightEdge + 20, screenHeight / 2);
 }
-
-// Handle window resizing
-window.addEventListener('resize', () => {
-    app.renderer.resize(window.innerWidth, window.innerHeight);
-    updateUIPositions();
-});
 
 // ======== GAME SETUP ========
 function setupGame() {

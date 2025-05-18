@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Keep viewport for mobile compatibility -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="Treasure Quest Slot Machine - A thrilling casino game with progressive jackpots and free spins.">
     <title>Treasure Quest Slots</title>
     <link rel="icon" type="image/png" href="assets/favicon.png">
@@ -17,12 +18,13 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
+            width: 100vw;
             font-family: 'Roboto Condensed', sans-serif;
         }
+        /* Remove forced canvas sizing, let app.js handle scaling */
         canvas {
             display: block;
-            border: 2px solid #ff0303;
-            border-radius: 10px;
+            background: #0a0a1a;
         }
         #loading {
             position: absolute;
@@ -33,24 +35,31 @@
             font-size: 24px;
             display: none;
         }
+        #startButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 30px;
+            font-size: 20px;
+            font-family: 'Roboto Condensed', sans-serif;
+            color: white;
+            background-color: #FFD700;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            z-index: 10;
+            display: block;
+        }
+        #startButton:hover {
+            background-color: #DAA520;
+        }
     </style>
 </head>
 <body>
     <div id="loading">Loading...</div>
-    <button id="startButton" style="
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        padding: 10px 20px;
-        font-size: 18px;
-        background-color: #FFD700;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        display: block;
-    ">Start Game</button>
-    <script src="https://pixijs.download/v7.3.2/pixi.min.js" defer></script>
+    <button id="startButton">Start Game</button>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.0/pixi.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@pixi/sound@5.2.2/dist/pixi-sound.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/PixiPlugin.min.js" defer></script>
