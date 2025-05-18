@@ -1,6 +1,6 @@
 // Initialize game variables globally for accessibility
 let balanceText, freeSpinsText, betText, autoplayText, historyText, reels, winText,
-    reelsContainer, spinButton, betUp, betDown, muteButton, buyBonusButton;
+    reelsContainer, spinButton, betUp, betDown, muteButton, buyBonusButton, winbar, autoplaybutton;
 
 // Cleanup previous application if exists
 if (window.__slotMachineApp) {
@@ -8,55 +8,17 @@ if (window.__slotMachineApp) {
     document.querySelector('canvas')?.remove();
 }
 
-// Initialize PIXI Application with fixed dimensions
-const BASE_WIDTH = 1200;
-const BASE_HEIGHT = 800;
+// Initialize PIXI Application with dynamic dimensions
 const app = new PIXI.Application({
-    width: BASE_WIDTH,     // Fixed base width
-    height: BASE_HEIGHT,   // Fixed base height
+    width: window.innerWidth,
+    height: window.innerHeight,
     backgroundColor: 0x0a0a1a,
     antialias: true,
-    resolution: 1,         // Set to 1 initially, adjust dynamically
-    autoDensity: true      // Helps with high-DPI displays
+    resolution: window.devicePixelRatio || 1,
+    autoDensity: true
 });
 window.__slotMachineApp = app;
 document.body.appendChild(app.view);
-
-// Function to scale and center the canvas
-function scaleCanvas() {
-    const devicePixelRatio = window.devicePixelRatio || 1;
-
-    // Calculate the scale to fit the window while maintaining aspect ratio
-    const scaleX = window.innerWidth / BASE_WIDTH;
-    const scaleY = window.innerHeight / BASE_HEIGHT;
-    const scale = Math.min(scaleX, scaleY);
-
-    // Adjust the renderer resolution to account for device pixel ratio
-    app.renderer.resolution = devicePixelRatio;
-    app.renderer.resize(BASE_WIDTH, BASE_HEIGHT);
-
-    // Scale the canvas using CSS to fit the screen
-    const scaledWidth = BASE_WIDTH * scale;
-    const scaledHeight = BASE_HEIGHT * scale;
-    app.view.style.width = `${scaledWidth}px`;
-    app.view.style.height = `${scaledHeight}px`;
-    app.view.style.position = 'absolute';
-    app.view.style.left = `${(window.innerWidth - scaledWidth) / 2}px`;
-    app.view.style.top = `${(window.innerHeight - scaledHeight) / 2}px`;
-
-    // Update app.screen dimensions for UI calculations
-    app.screen.width = BASE_WIDTH;
-    app.screen.height = BASE_HEIGHT;
-}
-
-// Initial canvas scaling
-scaleCanvas();
-
-// Handle window resizing
-window.addEventListener('resize', () => {
-    scaleCanvas();
-    updateUIPositions();
-});
 
 // Register GSAP PixiPlugin
 if (typeof PixiPlugin !== 'undefined') {
@@ -159,7 +121,7 @@ const soundManager = new SoundManager();
 const CONFIG = {
     REELS: 5,
     ROWS: 3,
-    SYMBOL_SIZE: 120, // Fixed size for consistency
+    SYMBOL_SIZE: Math.max(60, Math.min(window.innerWidth / 10, 120)), // Dynamic symbol size
     SPIN_DURATION: 1500,
     BET_LEVELS: [1, 2, 5, 10, 20, 50, 100],
     SYMBOLS: [
@@ -196,6 +158,14 @@ const CONFIG = {
         }
     }
 };
+
+function getResponsiveSymbolSize() {
+    const maxWidth = app.screen.width * 0.95;
+    const maxHeight = app.screen.height * 0.65;
+    const symbolWidth = Math.floor(maxWidth / CONFIG.REELS);
+    const symbolHeight = Math.floor(maxHeight / CONFIG.ROWS);
+    return Math.max(40, Math.min(symbolWidth, symbolHeight, 140)); // Clamp between 40 and 140
+}
 
 // ======== GAME STATE ========
 class GameState {
@@ -329,8 +299,8 @@ function createSymbolGraphic(symbol) {
 // ======== UI SETUP ========
 function createSpinButton() {
     const button = new PIXI.Container();
-    const buttonWidth = 220;
-    const buttonHeight = 70;
+    const buttonWidth = Math.max(120, Math.min(CONFIG.SYMBOL_SIZE * 2.5, 220));
+    const buttonHeight = Math.max(40, Math.min(CONFIG.SYMBOL_SIZE * 0.9, 70));
     const bg = new PIXI.Graphics()
         .beginFill(0xFFD700)
         .drawRoundedRect(0, 0, buttonWidth, buttonHeight, 20)
@@ -343,7 +313,7 @@ function createSpinButton() {
     button.addChild(bg);
 
     const text = new PIXI.Text(state.freeSpins > 0 ? 'FREE SPIN' : `SPIN`, {
-        fontSize: 32,
+        fontSize: Math.min(32, buttonWidth / 7),
         fill: 0xFFFFFF,
         fontFamily: 'Roboto Condensed',
         fontWeight: 'bold',
@@ -357,6 +327,7 @@ function createSpinButton() {
 
     button.interactive = true;
     button.buttonMode = true;
+
     button.on('pointerover', () => {
         gsap.to(button.scale, { x: 1.05, y: 1.05, duration: 0.2 });
         gsap.to(bg, { pixi: { tint: 0xFFFFE0 }, duration: 0.2 });
@@ -411,9 +382,10 @@ function createAutoplayButton() {
     return button;
 }
 
+
 function createBetButton(isUp) {
     const button = new PIXI.Container();
-    const buttonSize = 50;
+    const buttonSize = Math.max(36, Math.min(CONFIG.SYMBOL_SIZE * 0.7, 60)); // Responsive size
     const bg = new PIXI.Graphics()
         .beginFill(0x666666)
         .drawRoundedRect(0, 0, buttonSize, buttonSize, 10)
@@ -421,7 +393,7 @@ function createBetButton(isUp) {
     button.addChild(bg);
 
     const text = new PIXI.Text(isUp ? '+' : '-', {
-        fontSize: 28,
+        fontSize: Math.min(28, buttonSize / 2),
         fill: 0xFFFFFF,
         fontFamily: 'Roboto Condensed'
     });
@@ -446,8 +418,8 @@ function createBetButton(isUp) {
 
 function createMuteButton() {
     const button = new PIXI.Container();
-    const buttonWidth = 80;
-    const buttonHeight = 50;
+    const buttonWidth = Math.min(80, window.innerWidth / 5);
+    const buttonHeight = Math.min(50, window.innerHeight / 15);
     const bg = new PIXI.Graphics()
         .beginFill(0x333333)
         .drawRoundedRect(0, 0, buttonWidth, buttonHeight, 10)
@@ -457,7 +429,7 @@ function createMuteButton() {
     button.addChild(bg);
 
     const text = new PIXI.Text('MUTE', {
-        fontSize: 20,
+        fontSize: Math.min(20, buttonWidth / 4),
         fill: 0xFFFFFF,
         fontFamily: 'Roboto Condensed',
         fontWeight: 'bold'
@@ -957,6 +929,7 @@ function buyBonus() {
     );
 }
 
+
 function fakeSpinForBonus() {
     state.isSpinning = true;
     let reelsStopped = 0;
@@ -1162,42 +1135,123 @@ function showBonusSummary(totalWin) {
 }
 
 // ======== RESPONSIVE UI ========
-// Function to update positions based on screen size
 function updateUIPositions() {
     const screenWidth = app.screen.width;
     const screenHeight = app.screen.height;
 
-    // Position reels in the center
+    // Dynamically update symbol size
+    const newSymbolSize = getResponsiveSymbolSize();
+    if (CONFIG.SYMBOL_SIZE !== newSymbolSize) {
+        CONFIG.SYMBOL_SIZE = newSymbolSize;
+        rebuildReels();
+    }
+
+    // Move reels up by 85px for more space below
+    const reelsYOffset = 85;
     reelsContainer.position.set(
         (screenWidth - (CONFIG.REELS * CONFIG.SYMBOL_SIZE)) / 2,
-        (screenHeight - (CONFIG.ROWS * CONFIG.SYMBOL_SIZE)) / 2
+        (screenHeight - (CONFIG.ROWS * CONFIG.SYMBOL_SIZE)) / 2 - reelsYOffset
     );
 
-    // Position spin button (bottom-center)
-    spinButton.position.set((screenWidth - 220) / 2, screenHeight - 90);
+    // Win bar (top center)
+    const winBarWidth = CONFIG.REELS * CONFIG.SYMBOL_SIZE;
+    winbar.width = winBarWidth;
+    winbar.position.set(
+        (screenWidth - winBarWidth) / 2,
+        20
+    );
 
-    // Position bet buttons
-    betUp.position.set(screenWidth - 100, screenHeight - 80);
-    betDown.position.set(screenWidth - 160, screenHeight - 80);
+    // --- Responsive scaling for all buttons ---
+    const minScreen = Math.min(screenWidth, screenHeight);
+    let buttonScale = 1;
+    let betButtonScale = 1;
+    if (minScreen < 600) {
+    buttonScale = minScreen / 800;
+    buttonScale = Math.max(0.6, buttonScale);
+    betButtonScale = Math.max(0.70, 0.7 * buttonScale); // Set a minimum scale for bet buttons
+} else {
+    betButtonScale = 0.8;
+}
+    buyBonusButton.scale.set(buttonScale);
+    muteButton.scale.set(buttonScale);
+    betUp.scale.set(betButtonScale);
+    betDown.scale.set(betButtonScale);
+    autoplaybutton.scale.set(buttonScale);
 
-    // Position mute button
-    muteButton.position.set(screenWidth - 100, 20);
+    // Texts (top left, spaced)
+    balanceText.position.set(20, winbar.position.y + winbar.height + 10);
+    freeSpinsText.position.set(20, balanceText.y + balanceText.height + 10);
+    betText.position.set(20, freeSpinsText.y + freeSpinsText.height + 10);
+    autoplayText.position.set(20, betText.y + betText.height + 10);
 
-    // Position buy bonus button
-    buyBonusButton.position.set(30, screenHeight / 2 - 100);
+    // History text (bottom left)
+    historyText.position.set(20, screenHeight - historyText.height - 20);
 
-    // Position text
-    balanceText.position.set(20, 20);
-    freeSpinsText.position.set(20, 60);
-    betText.position.set(20, 100);
-    autoplayText.position.set(20, 140);
-    historyText.position.set(20, screenHeight - 30);
+    // Place - and + buttons above the Bet text, left-aligned and spaced horizontally
+    const betButtonWidth = betUp.width * betUp.scale.x;
+    const betButtonHeight = betUp.height * betUp.scale.y;
+    const betButtonsY = betText.y - betButtonHeight - 10; // 10px above Bet text for more space
+    const betButtonsX = 20;
+    const betButtonsSpacing = 13; // Less space between - and +
 
-    // Position free spins and multiplier icons
+    betDown.position.set(
+        betButtonsX,
+        betButtonsY
+    );
+    betUp.position.set(
+        betButtonsX + betButtonWidth + betButtonsSpacing,
+        betButtonsY
+    );
+
+    // Spin button (centered horizontally, above history)
+    const spinButtonsY = historyText.y - spinButton.height - 80; // 80px above history
+    spinButton.position.set(
+        (screenWidth - spinButton.width) / 2,
+        spinButtonsY
+    );
+
+    // Autoplay button (left of spin button)
+    const autoplayButtonWidth = autoplaybutton.width * autoplaybutton.scale.x;
+    autoplaybutton.position.set(
+        spinButton.x - autoplayButtonWidth - 24,
+        spinButton.y + (spinButton.height - autoplaybutton.height * autoplaybutton.scale.y) / 2
+    );
+
+    // Mute and buy bonus button positioning
+    if (screenWidth >= 600) {
+        // Under Bet text (left column)
+        muteButton.position.set(
+            20,
+            betText.y + betText.height + 16
+        );
+        buyBonusButton.position.set(
+            20,
+            muteButton.y + muteButton.height * buttonScale + 12
+        );
+    } else {
+        // Under reels, left-aligned, and further down for small screens
+        const reelsBottomY = reelsContainer.y + CONFIG.ROWS * CONFIG.SYMBOL_SIZE;
+        muteButton.position.set(
+            reelsContainer.x,
+            reelsBottomY + 100
+        );
+        buyBonusButton.position.set(
+            reelsContainer.x,
+            muteButton.y + muteButton.height * buttonScale + 12
+        );
+    }
+
+    // Free spins and multiplier icons (right of reels)
     const reelsRightEdge = reelsContainer.x + (CONFIG.REELS * CONFIG.SYMBOL_SIZE);
     window._freeSpinsContainer.position.set(reelsRightEdge + 20, screenHeight / 2 - 60);
     window._multiplierContainer.position.set(reelsRightEdge + 20, screenHeight / 2);
 }
+
+// Handle window resizing
+window.addEventListener('resize', () => {
+    app.renderer.resize(window.innerWidth, window.innerHeight);
+    updateUIPositions();
+});
 
 // ======== GAME SETUP ========
 function setupGame() {
@@ -1231,8 +1285,8 @@ function setupGame() {
     const uiContainer = new PIXI.Container();
     app.stage.addChild(uiContainer);
 
-    const winBar = createWinBar();
-    app.stage.addChild(winBar);
+    winbar = createWinBar();
+    app.stage.addChild(winbar);
 
     balanceText = new PIXI.Text(`CREDITS: $${state.balance}`, CONFIG.UI.TEXT_STYLES.BALANCE);
     uiContainer.addChild(balanceText);
@@ -1255,8 +1309,8 @@ function setupGame() {
     spinButton = createSpinButton();
     uiContainer.addChild(spinButton);
 
-    const autoplayButton = createAutoplayButton();
-    uiContainer.addChild(autoplayButton);
+    autoplaybutton = createAutoplayButton();
+    uiContainer.addChild(autoplaybutton);
 
     betUp = createBetButton(true);
     betDown = createBetButton(false);
@@ -1307,6 +1361,24 @@ function setupGame() {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !state.isSpinning) startSpin();
     });
+}
+
+function rebuildReels() {
+    reelsContainer.removeChildren();
+    reels = [];
+    for (let i = 0; i < CONFIG.REELS; i++) {
+        const reel = new PIXI.Container();
+        reel.x = i * CONFIG.SYMBOL_SIZE;
+        reelsContainer.addChild(reel);
+        reels.push(reel);
+
+        for (let j = 0; j < CONFIG.ROWS + 1; j++) {
+            const symbol = getRandomSymbol();
+            const { container } = createSymbolGraphic(symbol);
+            container.y = j * CONFIG.SYMBOL_SIZE;
+            reel.addChild(container);
+        }
+    }
 }
 
 // ======== INITIALIZATION ========
