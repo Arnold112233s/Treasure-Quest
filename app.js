@@ -382,7 +382,6 @@ function createAutoplayButton() {
     return button;
 }
 
-
 function createBetButton(isUp) {
     const button = new PIXI.Container();
     const buttonSize = Math.max(36, Math.min(CONFIG.SYMBOL_SIZE * 0.7, 60)); // Responsive size
@@ -554,7 +553,8 @@ function createFreeSpinsIcon() {
     container.visible = false;
 
     window.updateFreeSpinsProgress = (total, remaining) => {
-        const progress = (remaining / total) * 180;
+        const scaledWidth = 180 * container.scale.x; // Adjust progress bar width based on container scale
+        const progress = (remaining / total) * scaledWidth;
         gsap.to(progressBar, { width: progress, duration: 0.3, ease: 'power1.out' });
     };
 
@@ -929,7 +929,6 @@ function buyBonus() {
     );
 }
 
-
 function fakeSpinForBonus() {
     state.isSpinning = true;
     let reelsStopped = 0;
@@ -1166,12 +1165,12 @@ function updateUIPositions() {
     let buttonScale = 1;
     let betButtonScale = 1;
     if (minScreen < 600) {
-    buttonScale = minScreen / 800;
-    buttonScale = Math.max(0.6, buttonScale);
-    betButtonScale = Math.max(0.70, 0.7 * buttonScale); // Set a minimum scale for bet buttons
-} else {
-    betButtonScale = 0.8;
-}
+        buttonScale = minScreen / 800;
+        buttonScale = Math.max(0.6, buttonScale);
+        betButtonScale = Math.max(0.70, 0.7 * buttonScale);
+    } else {
+        betButtonScale = 0.8;
+    }
     buyBonusButton.scale.set(buttonScale);
     muteButton.scale.set(buttonScale);
     betUp.scale.set(betButtonScale);
@@ -1187,28 +1186,26 @@ function updateUIPositions() {
     // History text (bottom left)
     historyText.position.set(20, screenHeight - historyText.height - 20);
 
-    // Place - and + buttons above the Bet text, left-aligned and spaced horizontally
+    // Place - and + buttons
     const betButtonWidth = betUp.width * betUp.scale.x;
     const betButtonHeight = betUp.height * betUp.scale.y;
-    const betButtonsY = betText.y - betButtonHeight - 10; // 10px above Bet text for more space
-    const betButtonsX = 20;
-    const betButtonsSpacing = 13; // Less space between - and +
+    const betButtonsSpacing = 14;
 
-    betDown.position.set(
-        betButtonsX,
-        betButtonsY
-    );
-    betUp.position.set(
-        betButtonsX + betButtonWidth + betButtonsSpacing,
-        betButtonsY
-    );
+    if (minScreen < 600) {
+        const betButtonsY = winbar.position.y + winbar.height + 16;
+        const betButtonsX = winbar.position.x + winBarWidth - (betButtonWidth * 2 + betButtonsSpacing) - 30;
+        betDown.position.set(betButtonsX, betButtonsY);
+        betUp.position.set(betButtonsX + betButtonWidth + betButtonsSpacing, betButtonsY);
+    } else {
+        const betButtonsY = betText.y - betButtonHeight - 10;
+        const betButtonsX = 20;
+        betDown.position.set(betButtonsX, betButtonsY);
+        betUp.position.set(betButtonsX + betButtonWidth + betButtonsSpacing, betButtonsY);
+    }
 
     // Spin button (centered horizontally, above history)
-    const spinButtonsY = historyText.y - spinButton.height - 80; // 80px above history
-    spinButton.position.set(
-        (screenWidth - spinButton.width) / 2,
-        spinButtonsY
-    );
+    const spinButtonsY = historyText.y - spinButton.height - 80;
+    spinButton.position.set((screenWidth - spinButton.width) / 2, spinButtonsY);
 
     // Autoplay button (left of spin button)
     const autoplayButtonWidth = autoplaybutton.width * autoplaybutton.scale.x;
@@ -1219,32 +1216,71 @@ function updateUIPositions() {
 
     // Mute and buy bonus button positioning
     if (screenWidth >= 600) {
-        // Under Bet text (left column)
-        muteButton.position.set(
-            20,
-            betText.y + betText.height + 16
-        );
-        buyBonusButton.position.set(
-            20,
-            muteButton.y + muteButton.height * buttonScale + 12
-        );
+        muteButton.position.set(20, betText.y + betText.height + 16);
+        buyBonusButton.position.set(20, muteButton.y + muteButton.height * buttonScale + 12);
     } else {
-        // Under reels, left-aligned, and further down for small screens
         const reelsBottomY = reelsContainer.y + CONFIG.ROWS * CONFIG.SYMBOL_SIZE;
-        muteButton.position.set(
-            reelsContainer.x,
-            reelsBottomY + 100
-        );
-        buyBonusButton.position.set(
-            reelsContainer.x,
-            muteButton.y + muteButton.height * buttonScale + 12
-        );
+        muteButton.position.set(reelsContainer.x, reelsBottomY + 100);
+        buyBonusButton.position.set(reelsContainer.x, muteButton.y + muteButton.height * buttonScale + 12);
     }
 
-    // Free spins and multiplier icons (right of reels)
-    const reelsRightEdge = reelsContainer.x + (CONFIG.REELS * CONFIG.SYMBOL_SIZE);
-    window._freeSpinsContainer.position.set(reelsRightEdge + 20, screenHeight / 2 - 60);
-    window._multiplierContainer.position.set(reelsRightEdge + 20, screenHeight / 2);
+    // --- Free spins and multiplier icons, responsive position and layout ---
+    const iconWidth = Math.max(100, Math.min(screenWidth * 0.22, 200));
+    const iconHeight = Math.max(36, Math.min(screenHeight * 0.08, 60));
+    const iconFontSize = Math.floor(iconHeight * 0.7);
+
+     function fitTextToIcon(textObj, maxWidth, maxHeight, baseFontSize) {
+        textObj.style.fontSize = baseFontSize;
+        textObj.anchor.set(0.5);
+        textObj.updateText && textObj.updateText();
+        while (textObj.width > maxWidth - 12 && textObj.style.fontSize > 10) {
+            textObj.style.fontSize--;
+            textObj.updateText && textObj.updateText();
+        }
+        textObj.position.set(maxWidth / 2, maxHeight / 2);
+    }
+
+    if (screenWidth >= 900) {
+        // Desktop: icons to the right of the reels, stacked vertically
+        const reelsRightEdge = reelsContainer.x + (CONFIG.REELS * CONFIG.SYMBOL_SIZE);
+        const iconsY = (screenHeight - (iconHeight * 2 + 10)) / 2;
+        window._freeSpinsContainer.width = iconWidth;
+        window._freeSpinsContainer.height = iconHeight;
+        window._freeSpinsContainer.position.set(reelsRightEdge + 32, iconsY);
+
+        window._multiplierContainer.width = iconWidth;
+        window._multiplierContainer.height = iconHeight;
+        window._multiplierContainer.position.set(reelsRightEdge + 32, iconsY + iconHeight + 10);
+    } else if (screenWidth < 600) {
+        // Small mobile: icons above the reels, to the right
+        const iconsX = reelsContainer.x + (CONFIG.REELS * CONFIG.SYMBOL_SIZE) - iconWidth * 2 - 10;
+        const iconsY = reelsContainer.y - iconHeight - 18;
+        window._freeSpinsContainer.width = iconWidth;
+        window._freeSpinsContainer.height = iconHeight;
+        window._freeSpinsContainer.position.set(iconsX, iconsY);
+
+        window._multiplierContainer.width = iconWidth;
+        window._multiplierContainer.height = iconHeight;
+        window._multiplierContainer.position.set(iconsX + iconWidth + 10, iconsY);
+    } else {
+        // Tablet: icons side by side under winbar, to the right
+        const iconX = winbar.position.x + winbar.width - iconWidth * 2 - 10;
+        const iconY = winbar.position.y + winbar.height + 14;
+        window._freeSpinsContainer.width = iconWidth;
+        window._freeSpinsContainer.height = iconHeight;
+        window._freeSpinsContainer.position.set(iconX, iconY);
+
+        window._multiplierContainer.width = iconWidth;
+        window._multiplierContainer.height = iconHeight;
+        window._multiplierContainer.position.set(iconX + iconWidth + 10, iconY);
+    }
+
+    if (window._freeSpinsText) {
+        fitTextToIcon(window._freeSpinsText, iconWidth, iconHeight, iconFontSize);
+    }
+    if (window._multiplierText) {
+        fitTextToIcon(window._multiplierText, iconWidth, iconHeight, iconFontSize);
+    }
 }
 
 // Handle window resizing

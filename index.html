@@ -2,30 +2,34 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="description" content="Treasure Quest Slot Machine - A thrilling casino game with progressive jackpots and free spins.">
     <title>Treasure Quest Slots</title>
     <link rel="icon" type="image/png" href="assets/favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@700&display=swap" rel="stylesheet">
     <style>
         html, body {
-    margin: 0;
-    padding: 0;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    background: #0a0a1a;
-}
-canvas {
-    display: block;
-    width: 100vw !important;
-    height: 100vh !important;
-    max-width: 100vw;
-    max-height: 100vh;
-    object-fit: contain;
-    background: #0a0a1a;
-    touch-action: none;
-}
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+            background: #0a0a1a;
+        }
+        body {
+            position: relative;
+            min-height: 100vh;
+            min-width: 100vw;
+        }
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            touch-action: none;
+            width: 100vw !important;
+            height: 100vh !important;
+        }
         #loading {
             position: absolute;
             top: 50%;
@@ -34,24 +38,27 @@ canvas {
             color: #FFD700;
             font-size: 24px;
             display: none;
+            z-index: 10;
+        }
+        #startButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #FFD700;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: block;
+            z-index: 10;
         }
     </style>
 </head>
 <body>
     <div id="loading">Loading...</div>
-    <button id="startButton" style="
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        padding: 10px 20px;
-        font-size: 18px;
-        background-color: #FFD700;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        display: block;
-    ">Start Game</button>
+    <button id="startButton">Start Game</button>
     <script src="https://pixijs.download/v7.3.2/pixi.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@pixi/sound@5.2.2/dist/pixi-sound.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
